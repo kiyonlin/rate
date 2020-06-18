@@ -76,6 +76,8 @@ func (lim *Limiter) Limit() Limit {
 // Burst values allow more events to happen at once.
 // A zero Burst allows no events, unless limit == Inf.
 func (lim *Limiter) Burst() int {
+	lim.mu.Lock()
+	defer lim.mu.Unlock()
 	return lim.burst
 }
 
@@ -187,6 +189,14 @@ func (r *Reservation) CancelAt(now time.Time) {
 	}
 
 	return
+}
+
+// Tokens returns integer of limiter's remained tokens
+func (r *Reservation) Tokens() int {
+	r.lim.mu.Lock()
+	t := r.lim.tokens
+	r.lim.mu.Unlock()
+	return int(math.Floor(t))
 }
 
 // Reserve is shorthand for ReserveN(time.Now(), 1).

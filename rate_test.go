@@ -64,7 +64,10 @@ var (
 	t3 = t0.Add(time.Duration(3) * d)
 	t4 = t0.Add(time.Duration(4) * d)
 	t5 = t0.Add(time.Duration(5) * d)
+	t6 = t0.Add(time.Duration(6) * d)
 	t9 = t0.Add(time.Duration(9) * d)
+
+	t3Half = t3.Add(d / 2)
 )
 
 type allow struct {
@@ -243,6 +246,12 @@ func dSince(t time.Time) int {
 	return dFromDuration(t.Sub(t0))
 }
 
+func checkTokens(t *testing.T, r *Reservation, want int) {
+	if actual := r.Tokens(); actual != want {
+		t.Errorf("Reservation remained tokens is %d want %d", actual, want)
+	}
+}
+
 func runReserve(t *testing.T, lim *Limiter, req request) *Reservation {
 	return runReserveMax(t, lim, req, InfDuration)
 }
@@ -262,6 +271,20 @@ func TestSimpleReserve(t *testing.T) {
 	runReserve(t, lim, request{t0, 2, t0, true})
 	runReserve(t, lim, request{t0, 2, t2, true})
 	runReserve(t, lim, request{t3, 2, t4, true})
+}
+
+func TestReserveTokens(t *testing.T) {
+	lim := NewLimiter(10, 2)
+	var r *Reservation
+
+	r = runReserve(t, lim, request{t0, 2, t0, true})
+	checkTokens(t, r, 0)
+	r = runReserve(t, lim, request{t0, 2, t2, true})
+	checkTokens(t, r, -2)
+	r = runReserve(t, lim, request{t3, 2, t4, true})
+	checkTokens(t, r, -1)
+	r = runReserve(t, lim, request{t3Half, 2, t6, true})
+	checkTokens(t, r, -3)
 }
 
 func TestMix(t *testing.T) {
