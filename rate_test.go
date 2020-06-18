@@ -248,7 +248,7 @@ func dSince(t time.Time) int {
 
 func checkTokens(t *testing.T, r *Reservation, want int) {
 	t.Helper()
-	if actual := r.Tokens(); actual != want {
+	if actual := r.RemainedTokens(); actual != want {
 		t.Errorf("Reservation remained tokens is %d want %d", actual, want)
 	}
 }

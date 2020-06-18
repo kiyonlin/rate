@@ -195,8 +195,8 @@ func (r *Reservation) CancelAt(now time.Time) {
 	return
 }
 
-// Tokens returns integer of limiter's remained tokens, may be negative
-func (r *Reservation) Tokens() int {
+// RemainedTokens returns integer of limiter's remained tokens, may be negative
+func (r *Reservation) RemainedTokens() int {
 	return r.remainedTokens
 }
 
