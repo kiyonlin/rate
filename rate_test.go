@@ -247,6 +247,7 @@ func dSince(t time.Time) int {
 }
 
 func checkTokens(t *testing.T, r *Reservation, want int) {
+	t.Helper()
 	if actual := r.Tokens(); actual != want {
 		t.Errorf("Reservation remained tokens is %d want %d", actual, want)
 	}
@@ -285,6 +286,8 @@ func TestReserveTokens(t *testing.T) {
 	checkTokens(t, r, -1)
 	r = runReserve(t, lim, request{t3Half, 2, t6, true})
 	checkTokens(t, r, -3)
+	r.CancelAt(t3Half)
+	checkTokens(t, r, -1)
 }
 
 func TestMix(t *testing.T) {

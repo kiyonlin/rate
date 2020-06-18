@@ -105,12 +105,15 @@ func (lim *Limiter) AllowN(now time.Time, n int) bool {
 // A Reservation holds information about events that are permitted by a Limiter to happen after a delay.
 // A Reservation may be canceled, which may enable the Limiter to permit additional events.
 type Reservation struct {
-	ok        bool
-	lim       *Limiter
+	ok  bool
+	lim *Limiter
+	// tokens for request
 	tokens    int
 	timeToAct time.Time
 	// This is the Limit at reservation time, it can change later.
 	limit Limit
+	// This is the remained tokens of limiter at reservation time
+	remainedTokens int
 }
 
 // OK returns whether the limiter can provide the requested number of tokens
@@ -181,6 +184,7 @@ func (r *Reservation) CancelAt(now time.Time) {
 	// update state
 	r.lim.last = now
 	r.lim.tokens = tokens
+	r.remainedTokens = int(math.Floor(tokens))
 	if r.timeToAct == r.lim.lastEvent {
 		prevEvent := r.timeToAct.Add(r.limit.durationFromTokens(float64(-r.tokens)))
 		if !prevEvent.Before(now) {
@@ -191,12 +195,9 @@ func (r *Reservation) CancelAt(now time.Time) {
 	return
 }
 
-// Tokens returns integer of limiter's remained tokens
+// Tokens returns integer of limiter's remained tokens, may be negative
 func (r *Reservation) Tokens() int {
-	r.lim.mu.Lock()
-	t := r.lim.tokens
-	r.lim.mu.Unlock()
-	return int(math.Floor(t))
+	return r.remainedTokens
 }
 
 // Reserve is shorthand for ReserveN(time.Now(), 1).
@@ -322,10 +323,11 @@ func (lim *Limiter) reserveN(now time.Time, n int, maxFutureReserve time.Duratio
 	if lim.limit == Inf {
 		lim.mu.Unlock()
 		return Reservation{
-			ok:        true,
-			lim:       lim,
-			tokens:    n,
-			timeToAct: now,
+			ok:             true,
+			lim:            lim,
+			tokens:         n,
+			timeToAct:      now,
+			remainedTokens: lim.burst - n,
 		}
 	}
 
@@ -352,6 +354,8 @@ func (lim *Limiter) reserveN(now time.Time, n int, maxFutureReserve time.Duratio
 	if ok {
 		r.tokens = n
 		r.timeToAct = now.Add(waitDuration)
+		// store remaining tokens as integer
+		r.remainedTokens = int(math.Floor(tokens))
 	}
 
 	// Update state
