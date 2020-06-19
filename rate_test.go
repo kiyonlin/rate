@@ -246,10 +246,11 @@ func dSince(t time.Time) int {
 	return dFromDuration(t.Sub(t0))
 }
 
-func checkTokens(t *testing.T, r *Reservation, want int) {
+func checkRemainedTokensAndResetDuration(t *testing.T, r *Reservation, tokens int, reset time.Duration) {
 	t.Helper()
-	if actual := r.RemainedTokens(); actual != want {
-		t.Errorf("Reservation remained tokens is %d want %d", actual, want)
+	if r.RemainedTokens() != tokens || (r.Reset()-reset) > time.Nanosecond {
+		t.Errorf("Reservation remained tokens is %d tokens %d actual reset %dms want reset %dms",
+			r.RemainedTokens(), tokens, r.Reset().Milliseconds(), reset.Milliseconds())
 	}
 }
 
@@ -279,15 +280,15 @@ func TestReserveTokens(t *testing.T) {
 	var r *Reservation
 
 	r = runReserve(t, lim, request{t0, 2, t0, true})
-	checkTokens(t, r, 0)
+	checkRemainedTokensAndResetDuration(t, r, 0, d*2)
 	r = runReserve(t, lim, request{t0, 2, t2, true})
-	checkTokens(t, r, -2)
+	checkRemainedTokensAndResetDuration(t, r, -2, d*4)
 	r = runReserve(t, lim, request{t3, 2, t4, true})
-	checkTokens(t, r, -1)
+	checkRemainedTokensAndResetDuration(t, r, -1, d*3)
 	r = runReserve(t, lim, request{t3Half, 2, t6, true})
-	checkTokens(t, r, -3)
+	checkRemainedTokensAndResetDuration(t, r, -3, d*4+d/2)
 	r.CancelAt(t3Half)
-	checkTokens(t, r, -1)
+	checkRemainedTokensAndResetDuration(t, r, -1, d*2+d/2)
 }
 
 func TestMix(t *testing.T) {

@@ -114,6 +114,8 @@ type Reservation struct {
 	limit Limit
 	// This is the remained tokens of limiter at reservation time
 	remainedTokens int
+	// This is the duration that limiter restore the maximum of tokens at reservation time
+	reset time.Duration
 }
 
 // OK returns whether the limiter can provide the requested number of tokens
@@ -185,6 +187,7 @@ func (r *Reservation) CancelAt(now time.Time) {
 	r.lim.last = now
 	r.lim.tokens = tokens
 	r.remainedTokens = int(math.Floor(tokens))
+	r.reset = r.limit.durationFromTokens(float64(r.lim.burst) - tokens)
 	if r.timeToAct == r.lim.lastEvent {
 		prevEvent := r.timeToAct.Add(r.limit.durationFromTokens(float64(-r.tokens)))
 		if !prevEvent.Before(now) {
@@ -198,6 +201,11 @@ func (r *Reservation) CancelAt(now time.Time) {
 // RemainedTokens returns integer of limiter's remained tokens, may be negative
 func (r *Reservation) RemainedTokens() int {
 	return r.remainedTokens
+}
+
+// Reset returns the duration that limiter restore the maximum of tokens at reservation time
+func (r *Reservation) Reset() time.Duration {
+	return r.reset
 }
 
 // Reserve is shorthand for ReserveN(time.Now(), 1).
@@ -356,6 +364,7 @@ func (lim *Limiter) reserveN(now time.Time, n int, maxFutureReserve time.Duratio
 		r.timeToAct = now.Add(waitDuration)
 		// store remaining tokens as integer
 		r.remainedTokens = int(math.Floor(tokens))
+		r.reset = r.limit.durationFromTokens(float64(r.lim.burst) - tokens)
 	}
 
 	// Update state
