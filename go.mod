@@ -1,3 +1,3 @@
-module golang.org/x/time
+module github.com/kiyonlin/rate
 
 go 1.14
