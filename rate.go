@@ -186,7 +186,8 @@ func (r *Reservation) CancelAt(now time.Time) {
 	// update state
 	r.lim.last = now
 	r.lim.tokens = tokens
-	r.remainedTokens = int(math.Floor(tokens))
+	// 1e-9 used to solve the problem of missing precision
+	r.remainedTokens = int(math.Floor(tokens + 1e-9))
 	r.reset = r.limit.durationFromTokens(float64(r.lim.burst) - tokens)
 	if r.timeToAct == r.lim.lastEvent {
 		prevEvent := r.timeToAct.Add(r.limit.durationFromTokens(float64(-r.tokens)))
@@ -363,7 +364,8 @@ func (lim *Limiter) reserveN(now time.Time, n int, maxFutureReserve time.Duratio
 		r.tokens = n
 		r.timeToAct = now.Add(waitDuration)
 		// store remaining tokens as integer
-		r.remainedTokens = int(math.Floor(tokens))
+		// 1e-9 used to solve the problem of missing precision
+		r.remainedTokens = int(math.Floor(tokens + 1e-9))
 		r.reset = r.limit.durationFromTokens(float64(r.lim.burst) - tokens)
 	}
 
